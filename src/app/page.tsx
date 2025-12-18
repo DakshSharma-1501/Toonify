@@ -55,29 +55,29 @@ export default function Home() {
         <div className="min-h-screen flex flex-col bg-light-bg dark:bg-dark-bg">
             <Header />
 
-            <main className="flex-1 container mx-auto px-6 py-8 space-y-6">
+            <main className="flex-1 container mx-auto px-4 sm:px-6 py-4 sm:py-8 space-y-4 sm:space-y-6">
                 {/* Info Banner */}
-                <div className="card p-6 space-y-3 animate-slide-up">
-                    <div className="flex items-start justify-between gap-4">
+                <div className="card p-4 sm:p-6 space-y-3 animate-slide-up">
+                    <div className="flex flex-col sm:flex-row items-start justify-between gap-3 sm:gap-4">
                         <div className="flex-1 space-y-2">
-                            <h2 className="text-xl font-bold text-light-text-primary dark:text-dark-text-primary">
+                            <h2 className="text-lg sm:text-xl font-bold text-light-text-primary dark:text-dark-text-primary">
                                 Convert code to Token-Oriented Notation
                             </h2>
-                            <p className="text-sm text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
+                            <p className="text-xs sm:text-sm text-light-text-secondary dark:text-dark-text-secondary leading-relaxed">
                                 TOON exposes the <span className="font-semibold text-light-accent-primary dark:text-dark-accent-primary">intent</span> of your code in a format optimized for LLM reasoning.
                                 It&apos;s a lossy abstraction that reduces token count while preserving semantic meaning.
                             </p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
                             <button
                                 onClick={() => loadExample('json')}
-                                className="btn-secondary text-xs whitespace-nowrap"
+                                className="btn-secondary text-xs whitespace-nowrap w-full sm:w-auto"
                             >
                                 Load JSON Example
                             </button>
                             <button
                                 onClick={() => loadExample('react')}
-                                className="btn-secondary text-xs whitespace-nowrap"
+                                className="btn-secondary text-xs whitespace-nowrap w-full sm:w-auto"
                             >
                                 Load React Example
                             </button>
@@ -93,7 +93,7 @@ export default function Home() {
                 />
 
                 {/* Editors */}
-                <div className="grid lg:grid-cols-2 gap-6 h-[600px]">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 h-[400px] sm:h-[500px] lg:h-[600px]">
                     <EditorPanel
                         title="Input"
                         value={input}
@@ -125,11 +125,11 @@ export default function Home() {
                 )}
 
                 {/* Grammar Reference */}
-                <div className="card p-6 space-y-4">
-                    <h3 className="text-lg font-bold text-light-text-primary dark:text-dark-text-primary">
+                <div className="card p-4 sm:p-6 space-y-4">
+                    <h3 className="text-base sm:text-lg font-bold text-light-text-primary dark:text-dark-text-primary">
                         TOON Grammar Rules
                     </h3>
-                    <div className="grid md:grid-cols-2 gap-4 text-sm">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
                         <div className="space-y-2">
                             <h4 className="font-semibold text-light-accent-primary dark:text-dark-accent-primary">
                                 Core Principles
@@ -157,9 +157,9 @@ export default function Home() {
             </main>
 
             {/* Footer */}
-            <footer className="border-t border-light-border dark:border-dark-border py-6">
-                <div className="container mx-auto px-6 text-center">
-                    <p className="text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
+            <footer className="border-t border-light-border dark:border-dark-border py-4 sm:py-6">
+                <div className="container mx-auto px-4 sm:px-6 text-center">
+                    <p className="text-xs sm:text-sm text-light-text-tertiary dark:text-dark-text-tertiary">
                         TOONIFY is a frontend-only tool. All processing happens in your browser.
                     </p>
                 </div>
