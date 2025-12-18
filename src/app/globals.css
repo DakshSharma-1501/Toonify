@@ -1,0 +1,123 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Fira+Code:wght@400;500;600&display=swap');
+
+@layer base {
+  :root {
+    --bg: 250 248 255;
+    --surface: 255 255 255;
+    --elevated: 245 243 255;
+    --border: 233 229 245;
+    --text-primary: 26 26 46;
+    --text-secondary: 74 74 104;
+    --text-tertiary: 106 106 136;
+    --accent-primary: 124 58 237;
+    --accent-secondary: 167 139 250;
+    --accent-tertiary: 0 212 255;
+  }
+
+  .dark {
+    --bg: 10 10 26;
+    --surface: 26 26 46;
+    --elevated: 37 37 65;
+    --border: 45 45 74;
+    --text-primary: 232 232 240;
+    --text-secondary: 168 168 192;
+    --text-tertiary: 120 120 160;
+    --accent-primary: 0 212 255;
+    --accent-secondary: 124 58 237;
+    --accent-tertiary: 167 139 250;
+  }
+
+  body {
+    @apply bg-light-bg dark:bg-dark-bg text-light-text-primary dark:text-dark-text-primary;
+    @apply font-sans antialiased;
+  }
+
+  html {
+    scroll-behavior: smooth;
+  }
+}
+
+@layer components {
+  .glass-effect {
+    @apply bg-white/80 dark:bg-dark-surface/80 backdrop-blur-xl;
+    @apply border border-light-border/50 dark:border-dark-border/50;
+  }
+
+  .btn-primary {
+    @apply px-4 py-2 rounded-lg font-medium;
+    @apply bg-light-accent-primary dark:bg-dark-accent-primary;
+    @apply text-white dark:text-dark-bg;
+    @apply hover:opacity-90 active:scale-95;
+    @apply transition-all duration-200;
+    @apply shadow-lg shadow-light-accent-primary/20 dark:shadow-dark-accent-primary/20;
+  }
+
+  .btn-secondary {
+    @apply px-4 py-2 rounded-lg font-medium;
+    @apply bg-light-elevated dark:bg-dark-elevated;
+    @apply text-light-text-primary dark:text-dark-text-primary;
+    @apply hover:bg-light-border dark:hover:bg-dark-border;
+    @apply active:scale-95 transition-all duration-200;
+    @apply border border-light-border dark:border-dark-border;
+  }
+
+  .input-field {
+    @apply px-4 py-2 rounded-lg;
+    @apply bg-light-surface dark:bg-dark-surface;
+    @apply border border-light-border dark:border-dark-border;
+    @apply text-light-text-primary dark:text-dark-text-primary;
+    @apply placeholder:text-light-text-tertiary dark:placeholder:text-dark-text-tertiary;
+    @apply focus:outline-none focus:ring-2 focus:ring-light-accent-primary dark:focus:ring-dark-accent-primary;
+    @apply transition-all duration-200;
+  }
+
+  .card {
+    @apply bg-light-surface dark:bg-dark-surface;
+    @apply border border-light-border dark:border-dark-border;
+    @apply rounded-xl shadow-lg;
+    @apply transition-all duration-300;
+  }
+
+  .gradient-text {
+    @apply bg-gradient-to-r from-light-accent-primary to-light-accent-tertiary;
+    @apply dark:from-dark-accent-primary dark:to-dark-accent-tertiary;
+    @apply bg-clip-text text-transparent;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  @apply bg-light-bg dark:bg-dark-bg;
+}
+
+::-webkit-scrollbar-thumb {
+  @apply bg-light-border dark:bg-dark-border rounded-full;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-light-text-tertiary dark:bg-dark-text-tertiary;
+}
+
+/* Monaco Editor theme adjustments */
+.monaco-editor {
+  @apply rounded-lg overflow-hidden;
+}
+
+.monaco-editor .margin {
+  @apply bg-light-elevated dark:bg-dark-elevated;
+}
