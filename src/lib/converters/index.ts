@@ -67,10 +67,17 @@ export class ToonConverter {
     }
 
     /**
-     * Estimate token count (rough approximation: 1 token ≈ 4 characters)
+     * Estimate token count using improved algorithm from BaseConverter
      */
     private estimateTokens(text: string): number {
-        return Math.ceil(text.length / 4);
+        // Normalize whitespace: trim and collapse multiple spaces
+        const normalized = text
+            .trim()
+            .replace(/\s+/g, ' ')
+            .replace(/\n\s*\n/g, '\n');
+
+        // Use 3.5 character ratio for better accuracy with code
+        return Math.ceil(normalized.length / 3.5);
     }
 }
 

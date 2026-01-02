@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { Moon, Sun } from 'lucide-react';
 
 export default function Header() {
@@ -42,18 +43,28 @@ export default function Header() {
                         </div>
                     </div>
 
-                    {/* Theme Toggle */}
-                    <button
-                        onClick={toggleTheme}
-                        className="btn-secondary !p-2 sm:!p-2.5 group"
-                        aria-label="Toggle theme"
-                    >
-                        {isDark ? (
-                            <Sun className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-180 transition-transform duration-500" />
-                        ) : (
-                            <Moon className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-rotate-180 transition-transform duration-500" />
-                        )}
-                    </button>
+                    {/* Navigation */}
+                    <div className="flex items-center gap-3">
+                        <Link
+                            href="/playground"
+                            className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary hover:text-light-accent-primary dark:hover:text-dark-accent-primary transition-colors"
+                        >
+                            <span>Playground</span>
+                        </Link>
+
+                        {/* Theme Toggle */}
+                        <button
+                            onClick={toggleTheme}
+                            className="btn-secondary !p-2 sm:!p-2.5 group"
+                            aria-label="Toggle theme"
+                        >
+                            {isDark ? (
+                                <Sun className="w-4 h-4 sm:w-5 sm:h-5 group-hover:rotate-180 transition-transform duration-500" />
+                            ) : (
+                                <Moon className="w-4 h-4 sm:w-5 sm:h-5 group-hover:-rotate-180 transition-transform duration-500" />
+                            )}
+                        </button>
+                    </div>
                 </div>
             </div>
         </header>

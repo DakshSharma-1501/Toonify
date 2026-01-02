@@ -35,3 +35,9 @@ export interface ConversionStats {
     savings: number;
     savingsPercentage: number;
 }
+
+// Babel AST type helpers
+import type { Node, Identifier, ObjectPattern, CallExpression, ArrayExpression } from '@babel/types';
+import type { NodePath } from '@babel/traverse';
+
+export type { Node, Identifier, ObjectPattern, CallExpression, ArrayExpression, NodePath };
