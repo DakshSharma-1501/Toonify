@@ -1,11 +1,27 @@
 'use client';
 
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useMemo, useCallback } from 'react';
 import * as Diff from 'diff';
 import ToolLayout from '@/components/playground/ToolLayout';
 import CopyButton from '@/components/playground/CopyButton';
+import FileUploader from '@/components/playground/FileUploader';
+import DiffToolbar from '@/components/playground/DiffToolbar';
+import DiffSidebar from '@/components/playground/DiffSidebar';
+import DiffViewer from '@/components/playground/DiffViewer';
+import MergeConflictResolver from '@/components/playground/MergeConflictResolver';
 import { saveToStorage, loadFromStorage, STORAGE_KEYS } from '@/lib/playground/localStorage';
-import type { DiffCheckerState } from '@/lib/playground/types';
+import type { DiffCheckerState, MergeConflict, ViewMode, DiffOptions } from '@/lib/playground/types';
+import {
+    calculateDiffStats,
+    detectMergeConflicts,
+    resolveMergeConflict,
+    generateUnifiedDiff,
+    generatePatch,
+    exportAsHTML,
+    swapContent,
+    findNextDifference,
+    findPreviousDifference,
+} from '@/lib/playground/diffUtils';
 
 const DEFAULT_ORIGINAL = `function calculateTotal(items) {
   let total = 0;
@@ -21,24 +37,81 @@ const DEFAULT_MODIFIED = `function calculateTotal(items) {
   }, 0);
 }`;
 
+const DEFAULT_OPTIONS: DiffOptions = {
+    ignoreWhitespace: false,
+    caseSensitive: true,
+    granularity: 'line',
+    showLineNumbers: true,
+    syntaxHighlight: false,
+    language: 'javascript',
+    collapseUnchanged: false,
+};
+
 export default function DiffCheckerPage() {
-    const [state, setState] = useState<DiffCheckerState>(() =>
-        loadFromStorage(STORAGE_KEYS.DIFF_CHECKER, {
+    const [state, setState] = useState<DiffCheckerState>({
+        original: DEFAULT_ORIGINAL,
+        modified: DEFAULT_MODIFIED,
+        viewMode: 'side-by-side',
+        options: DEFAULT_OPTIONS,
+    });
+
+    const [conflicts, setConflicts] = useState<MergeConflict[]>([]);
+    const [currentDiffIndex, setCurrentDiffIndex] = useState(0);
+    const [isLoaded, setIsLoaded] = useState(false);
+
+    // Load from localStorage on mount (client-side only)
+    useEffect(() => {
+        const saved = loadFromStorage(STORAGE_KEYS.DIFF_CHECKER, {
             original: DEFAULT_ORIGINAL,
             modified: DEFAULT_MODIFIED,
-        })
-    );
+            viewMode: 'side-by-side' as ViewMode,
+            options: DEFAULT_OPTIONS,
+        });
+
+        setState({
+            original: saved.original || DEFAULT_ORIGINAL,
+            modified: saved.modified || DEFAULT_MODIFIED,
+            viewMode: saved.viewMode || 'side-by-side',
+            options: { ...DEFAULT_OPTIONS, ...saved.options },
+        });
+        setIsLoaded(true);
+    }, []);
 
     // Save to localStorage
     useEffect(() => {
-        saveToStorage(STORAGE_KEYS.DIFF_CHECKER, state);
-    }, [state]);
+        if (isLoaded) {
+            saveToStorage(STORAGE_KEYS.DIFF_CHECKER, state);
+        }
+    }, [state, isLoaded]);
+
+    // Detect merge conflicts
+    useEffect(() => {
+        const detectedConflicts = detectMergeConflicts(state.original);
+        setConflicts(detectedConflicts);
+    }, [state.original]);
 
     // Compute diff
     const diffResult = useMemo(() => {
-        const changes = Diff.diffLines(state.original, state.modified);
-        return changes;
-    }, [state.original, state.modified]);
+        let original = state.original;
+        let modified = state.modified;
+
+        if (state.options.ignoreWhitespace) {
+            original = original.replace(/\s+/g, ' ').trim();
+            modified = modified.replace(/\s+/g, ' ').trim();
+        }
+
+        if (!state.options.caseSensitive) {
+            original = original.toLowerCase();
+            modified = modified.toLowerCase();
+        }
+
+        return Diff.diffLines(original, modified);
+    }, [state.original, state.modified, state.options.ignoreWhitespace, state.options.caseSensitive]);
+
+    // Calculate statistics
+    const stats = useMemo(() => {
+        return calculateDiffStats(state.original, state.modified, state.options);
+    }, [state.original, state.modified, state.options]);
 
     // Generate diff text for copying
     const diffText = useMemo(() => {
@@ -54,29 +127,130 @@ export default function DiffCheckerPage() {
             .join('\n');
     }, [diffResult]);
 
-    const handleReset = () => {
+    // Handlers
+    const handleReset = useCallback(() => {
         setState({
             original: DEFAULT_ORIGINAL,
             modified: DEFAULT_MODIFIED,
+            viewMode: 'side-by-side',
+            options: DEFAULT_OPTIONS,
         });
-    };
+    }, []);
 
-    const stats = useMemo(() => {
-        const added = diffResult.filter((c) => c.added).reduce((sum, c) => sum + (c.count || 0), 0);
-        const removed = diffResult.filter((c) => c.removed).reduce((sum, c) => sum + (c.count || 0), 0);
-        const unchanged = diffResult.filter((c) => !c.added && !c.removed).reduce((sum, c) => sum + (c.count || 0), 0);
-        return { added, removed, unchanged };
-    }, [diffResult]);
+    const handleSwap = useCallback(() => {
+        const swapped = swapContent(state.original, state.modified);
+        setState((prev) => ({
+            ...prev,
+            original: swapped.original,
+            modified: swapped.modified,
+        }));
+    }, [state.original, state.modified]);
+
+    const handleFileLoad = useCallback(
+        (content: string, filename: string, side: 'original' | 'modified') => {
+            setState((prev) => ({
+                ...prev,
+                [side]: content,
+            }));
+        },
+        []
+    );
+
+    const handleOptionsChange = useCallback((options: Partial<DiffOptions>) => {
+        setState((prev) => ({
+            ...prev,
+            options: { ...prev.options, ...options },
+        }));
+    }, []);
+
+    const handleViewModeChange = useCallback((viewMode: ViewMode) => {
+        setState((prev) => ({ ...prev, viewMode }));
+    }, []);
+
+    const handleNavigateNext = useCallback(() => {
+        const next = findNextDifference(diffResult, currentDiffIndex);
+        if (next !== -1) {
+            setCurrentDiffIndex(next);
+        }
+    }, [diffResult, currentDiffIndex]);
+
+    const handleNavigatePrev = useCallback(() => {
+        const prev = findPreviousDifference(diffResult, currentDiffIndex);
+        if (prev !== -1) {
+            setCurrentDiffIndex(prev);
+        }
+    }, [diffResult, currentDiffIndex]);
+
+    const handleExportUnified = useCallback(() => {
+        const unified = generateUnifiedDiff(state.original, state.modified);
+        navigator.clipboard.writeText(unified);
+        // You could add a toast notification here
+    }, [state.original, state.modified]);
+
+    const handleExportPatch = useCallback(() => {
+        const patch = generatePatch(state.original, state.modified);
+        navigator.clipboard.writeText(patch);
+    }, [state.original, state.modified]);
+
+    const handleExportHTML = useCallback(() => {
+        const html = exportAsHTML(state.original, state.modified, state.options);
+        const blob = new Blob([html], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'diff-export.html';
+        a.click();
+        URL.revokeObjectURL(url);
+    }, [state.original, state.modified, state.options]);
+
+    const handleResolveConflict = useCallback(
+        (conflictId: string, resolution: MergeConflict) => {
+            setConflicts((prev) =>
+                prev.map((c) => (c.id === conflictId ? resolution : c))
+            );
+        },
+        []
+    );
+
+    const handleResolveAllConflicts = useCallback(() => {
+        let resolved = state.original;
+        conflicts.forEach((conflict) => {
+            if (conflict.resolution) {
+                resolved = resolveMergeConflict(resolved, conflict);
+            }
+        });
+        setState((prev) => ({ ...prev, original: resolved }));
+        setConflicts([]);
+    }, [state.original, conflicts]);
+
+    const hasNext = useMemo(
+        () => findNextDifference(diffResult, currentDiffIndex) !== -1,
+        [diffResult, currentDiffIndex]
+    );
+
+    const hasPrev = useMemo(
+        () => findPreviousDifference(diffResult, currentDiffIndex) !== -1,
+        [diffResult, currentDiffIndex]
+    );
 
     return (
         <ToolLayout
             title="Diff Checker"
-            description="Compare two text blocks and see differences highlighted"
+            description="Compare two text blocks with advanced diff visualization and merge conflict resolution"
         >
             <div className="space-y-4">
+                {/* Merge Conflicts */}
+                {conflicts.length > 0 && (
+                    <MergeConflictResolver
+                        conflicts={conflicts}
+                        onResolve={handleResolveConflict}
+                        onResolveAll={handleResolveAllConflicts}
+                    />
+                )}
+
                 {/* Stats Bar */}
                 <div className="card p-4 flex flex-wrap items-center justify-between gap-4">
-                    <div className="flex items-center gap-6 text-sm">
+                    <div className="flex items-center gap-6 text-sm flex-wrap">
                         <div className="flex items-center gap-2">
                             <div className="w-3 h-3 rounded-full bg-green-500"></div>
                             <span className="text-light-text-secondary dark:text-dark-text-secondary">
@@ -95,6 +269,11 @@ export default function DiffCheckerPage() {
                                 Unchanged: <span className="font-semibold">{stats.unchanged}</span> lines
                             </span>
                         </div>
+                        <div className="flex items-center gap-2">
+                            <span className="text-light-text-secondary dark:text-dark-text-secondary">
+                                Similarity: <span className="font-semibold text-blue-500">{stats.similarity}%</span>
+                            </span>
+                        </div>
                     </div>
                     <div className="flex items-center gap-2">
                         <button onClick={handleReset} className="btn-secondary">
@@ -104,72 +283,92 @@ export default function DiffCheckerPage() {
                     </div>
                 </div>
 
-                {/* Input Textareas */}
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                    <div className="card p-4 space-y-2">
-                        <label className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
-                            Original
-                        </label>
-                        <textarea
-                            value={state.original}
-                            onChange={(e) => setState((prev) => ({ ...prev, original: e.target.value }))}
-                            className="w-full h-[300px] px-3 py-2 bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-light-accent-primary dark:focus:ring-dark-accent-primary text-light-text-primary dark:text-dark-text-primary font-mono text-sm resize-none"
-                            placeholder="Enter original text"
+                {/* Toolbar */}
+                <DiffToolbar
+                    viewMode={state.viewMode}
+                    onViewModeChange={handleViewModeChange}
+                    onNavigateNext={handleNavigateNext}
+                    onNavigatePrev={handleNavigatePrev}
+                    onSwap={handleSwap}
+                    onExportUnified={handleExportUnified}
+                    onExportHTML={handleExportHTML}
+                    onExportPatch={handleExportPatch}
+                    hasNext={hasNext}
+                    hasPrev={hasPrev}
+                />
+
+                {/* Main Content */}
+                <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+                    {/* Sidebar */}
+                    <div className="lg:col-span-1">
+                        <DiffSidebar
+                            options={state.options}
+                            onOptionsChange={handleOptionsChange}
                         />
                     </div>
 
-                    <div className="card p-4 space-y-2">
-                        <label className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
-                            Modified
-                        </label>
-                        <textarea
-                            value={state.modified}
-                            onChange={(e) => setState((prev) => ({ ...prev, modified: e.target.value }))}
-                            className="w-full h-[300px] px-3 py-2 bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-light-accent-primary dark:focus:ring-dark-accent-primary text-light-text-primary dark:text-dark-text-primary font-mono text-sm resize-none"
-                            placeholder="Enter modified text"
-                        />
-                    </div>
-                </div>
-
-                {/* Diff Output */}
-                <div className="card p-4 space-y-2">
-                    <label className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
-                        Diff Output
-                    </label>
-                    <div className="bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg overflow-hidden">
-                        <div className="max-h-[400px] overflow-auto font-mono text-sm">
-                            {diffResult.map((change, index) => {
-                                const lines = change.value.split('\n').filter((line) => line);
-
-                                return lines.map((line, lineIndex) => {
-                                    let bgColor = '';
-                                    let textColor = '';
-                                    let prefix = '  ';
-
-                                    if (change.added) {
-                                        bgColor = 'bg-green-500/10 dark:bg-green-500/20';
-                                        textColor = 'text-green-700 dark:text-green-300';
-                                        prefix = '+ ';
-                                    } else if (change.removed) {
-                                        bgColor = 'bg-red-500/10 dark:bg-red-500/20';
-                                        textColor = 'text-red-700 dark:text-red-300';
-                                        prefix = '- ';
-                                    } else {
-                                        textColor = 'text-light-text-secondary dark:text-dark-text-secondary';
+                    {/* Input & Output */}
+                    <div className="lg:col-span-3 space-y-4">
+                        {/* Input Textareas */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                            <div className="card p-4 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
+                                        Original
+                                    </label>
+                                    <FileUploader
+                                        onFileLoad={(content, filename) =>
+                                            handleFileLoad(content, filename, 'original')
+                                        }
+                                        label="Upload"
+                                    />
+                                </div>
+                                <textarea
+                                    value={state.original}
+                                    onChange={(e) =>
+                                        setState((prev) => ({
+                                            ...prev,
+                                            original: e.target.value,
+                                        }))
                                     }
+                                    className="w-full h-[300px] px-3 py-2 bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-light-accent-primary dark:focus:ring-dark-accent-primary text-light-text-primary dark:text-dark-text-primary font-mono text-sm resize-none"
+                                    placeholder="Enter original text"
+                                />
+                            </div>
 
-                                    return (
-                                        <div
-                                            key={`${index}-${lineIndex}`}
-                                            className={`px-4 py-1 ${bgColor} ${textColor} whitespace-pre`}
-                                        >
-                                            <span className="select-none opacity-50">{prefix}</span>
-                                            {line}
-                                        </div>
-                                    );
-                                });
-                            })}
+                            <div className="card p-4 space-y-2">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
+                                        Modified
+                                    </label>
+                                    <FileUploader
+                                        onFileLoad={(content, filename) =>
+                                            handleFileLoad(content, filename, 'modified')
+                                        }
+                                        label="Upload"
+                                    />
+                                </div>
+                                <textarea
+                                    value={state.modified}
+                                    onChange={(e) =>
+                                        setState((prev) => ({
+                                            ...prev,
+                                            modified: e.target.value,
+                                        }))
+                                    }
+                                    className="w-full h-[300px] px-3 py-2 bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border rounded-lg focus:outline-none focus:ring-2 focus:ring-light-accent-primary dark:focus:ring-dark-accent-primary text-light-text-primary dark:text-dark-text-primary font-mono text-sm resize-none"
+                                    placeholder="Enter modified text"
+                                />
+                            </div>
                         </div>
+
+                        {/* Diff Output */}
+                        <DiffViewer
+                            original={state.original}
+                            modified={state.modified}
+                            viewMode={state.viewMode}
+                            options={state.options}
+                        />
                     </div>
                 </div>
             </div>

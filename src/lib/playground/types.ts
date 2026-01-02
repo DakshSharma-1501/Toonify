@@ -36,9 +36,24 @@ export interface RegexMatch {
 }
 
 // Diff Checker
+export type ViewMode = 'side-by-side' | 'unified' | 'split';
+export type DiffGranularity = 'line' | 'word' | 'character';
+
+export interface DiffOptions {
+    ignoreWhitespace: boolean;
+    caseSensitive: boolean;
+    granularity: DiffGranularity;
+    showLineNumbers: boolean;
+    syntaxHighlight: boolean;
+    language: string;
+    collapseUnchanged: boolean;
+}
+
 export interface DiffCheckerState {
     original: string;
     modified: string;
+    viewMode: ViewMode;
+    options: DiffOptions;
 }
 
 export type DiffType = 'added' | 'removed' | 'unchanged';
@@ -47,6 +62,25 @@ export interface DiffResult {
     type: DiffType;
     value: string;
     count?: number;
+}
+
+export interface MergeConflict {
+    id: string;
+    startLine: number;
+    endLine: number;
+    original: string;
+    modified: string;
+    resolved?: string;
+    resolution?: 'left' | 'right' | 'both' | 'custom';
+}
+
+export interface DiffStats {
+    added: number;
+    removed: number;
+    unchanged: number;
+    modified: number;
+    totalLines: number;
+    similarity: number;
 }
 
 // JSON Formatter
