@@ -47,9 +47,14 @@ export default function Header() {
                     <div className="flex items-center gap-3">
                         <Link
                             href="/playground"
-                            className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium text-light-text-secondary dark:text-dark-text-secondary hover:text-light-accent-primary dark:hover:text-dark-accent-primary transition-colors"
+                            className="hidden sm:flex items-center gap-2 px-4 py-2 text-sm font-medium rounded-lg bg-light-elevated dark:bg-dark-elevated border border-light-border dark:border-dark-border hover:border-light-accent-primary dark:hover:border-dark-accent-primary transition-all duration-300 group shadow-sm hover:shadow-md"
                         >
-                            <span>Playground</span>
+                            <span className="text-light-text-primary dark:text-dark-text-primary group-hover:text-light-accent-primary dark:group-hover:text-dark-accent-primary transition-colors">
+                                Playground
+                            </span>
+                            <span className="px-1.5 py-0.5 text-[10px] font-bold bg-gradient-to-r from-[#FF6B6B] to-[#FF8E53] text-white rounded uppercase tracking-wide animate-pulse shadow-lg shadow-[#FF6B6B]/50">
+                                New
+                            </span>
                         </Link>
 
                         {/* Theme Toggle */}
