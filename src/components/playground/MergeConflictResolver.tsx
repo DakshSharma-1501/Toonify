@@ -8,12 +8,14 @@ interface MergeConflictResolverProps {
     conflicts: MergeConflict[];
     onResolve: (conflictId: string, resolution: MergeConflict) => void;
     onResolveAll: () => void;
+    onAutoMerge?: () => void;
 }
 
 export default function MergeConflictResolver({
     conflicts,
     onResolve,
     onResolveAll,
+    onAutoMerge,
 }: MergeConflictResolverProps) {
     const [customResolutions, setCustomResolutions] = useState<{
         [key: string]: string;
@@ -46,6 +48,22 @@ export default function MergeConflictResolver({
         });
     };
 
+    const handleAutoMerge = () => {
+        // Intelligent auto-merge: prefer modified (right) for most cases
+        // This simulates accepting incoming changes in a merge scenario
+        conflicts.forEach((conflict) => {
+            if (!conflict.resolution) {
+                handleResolve(conflict, 'right');
+            }
+        });
+        // Trigger the callback after a short delay to allow state updates
+        setTimeout(() => {
+            if (onAutoMerge) {
+                onAutoMerge();
+            }
+        }, 100);
+    };
+
     return (
         <div className="card p-4 space-y-4">
             <div className="flex items-center justify-between">
@@ -58,15 +76,25 @@ export default function MergeConflictResolver({
                         {conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''}
                     </span>
                 </div>
-                {conflicts.every((c) => c.resolution) && (
+                <div className="flex items-center gap-2">
                     <button
-                        onClick={onResolveAll}
-                        className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm font-medium"
+                        onClick={handleAutoMerge}
+                        className="flex items-center gap-2 px-4 py-2 bg-blue-500 hover:bg-blue-600 text-white rounded-lg transition-colors text-sm font-medium"
+                        title="Automatically resolve all conflicts by accepting modified (right) version"
                     >
-                        <Check className="w-4 h-4" />
-                        Apply All Resolutions
+                        <GitMerge className="w-4 h-4" />
+                        Auto Merge
                     </button>
-                )}
+                    {conflicts.every((c) => c.resolution) && (
+                        <button
+                            onClick={onResolveAll}
+                            className="flex items-center gap-2 px-4 py-2 bg-green-500 hover:bg-green-600 text-white rounded-lg transition-colors text-sm font-medium"
+                        >
+                            <Check className="w-4 h-4" />
+                            Apply All Resolutions
+                        </button>
+                    )}
+                </div>
             </div>
 
             <div className="space-y-4">
@@ -98,8 +126,8 @@ export default function MergeConflictResolver({
                                     <button
                                         onClick={() => handleResolve(conflict, 'left')}
                                         className={`px-2 py-1 text-xs rounded transition-colors ${conflict.resolution === 'left'
-                                                ? 'bg-green-500 text-white'
-                                                : 'bg-light-elevated dark:bg-dark-elevated hover:bg-light-border dark:hover:bg-dark-border'
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-light-elevated dark:bg-dark-elevated hover:bg-light-border dark:hover:bg-dark-border'
                                             }`}
                                     >
                                         Accept
@@ -119,8 +147,8 @@ export default function MergeConflictResolver({
                                     <button
                                         onClick={() => handleResolve(conflict, 'right')}
                                         className={`px-2 py-1 text-xs rounded transition-colors ${conflict.resolution === 'right'
-                                                ? 'bg-green-500 text-white'
-                                                : 'bg-light-elevated dark:bg-dark-elevated hover:bg-light-border dark:hover:bg-dark-border'
+                                            ? 'bg-green-500 text-white'
+                                            : 'bg-light-elevated dark:bg-dark-elevated hover:bg-light-border dark:hover:bg-dark-border'
                                             }`}
                                     >
                                         Accept
@@ -137,8 +165,8 @@ export default function MergeConflictResolver({
                             <button
                                 onClick={() => handleResolve(conflict, 'both')}
                                 className={`px-3 py-1.5 text-xs rounded transition-colors ${conflict.resolution === 'both'
-                                        ? 'bg-green-500 text-white'
-                                        : 'bg-light-elevated dark:bg-dark-elevated hover:bg-light-border dark:hover:bg-dark-border'
+                                    ? 'bg-green-500 text-white'
+                                    : 'bg-light-elevated dark:bg-dark-elevated hover:bg-light-border dark:hover:bg-dark-border'
                                     }`}
                             >
                                 Accept Both
@@ -161,8 +189,8 @@ export default function MergeConflictResolver({
                                     onClick={() => handleResolve(conflict, 'custom')}
                                     disabled={!customResolutions[conflict.id]}
                                     className={`px-3 py-1.5 text-xs rounded transition-colors ${conflict.resolution === 'custom'
-                                            ? 'bg-green-500 text-white'
-                                            : 'bg-light-elevated dark:bg-dark-elevated hover:bg-light-border dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed'
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-light-elevated dark:bg-dark-elevated hover:bg-light-border dark:hover:bg-dark-border disabled:opacity-50 disabled:cursor-not-allowed'
                                         }`}
                                 >
                                     Use Custom

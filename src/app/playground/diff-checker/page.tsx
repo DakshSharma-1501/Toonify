@@ -58,6 +58,7 @@ export default function DiffCheckerPage() {
     const [conflicts, setConflicts] = useState<MergeConflict[]>([]);
     const [currentDiffIndex, setCurrentDiffIndex] = useState(0);
     const [isLoaded, setIsLoaded] = useState(false);
+    const [showMergedOutput, setShowMergedOutput] = useState(false);
 
     // Load from localStorage on mount (client-side only)
     useEffect(() => {
@@ -221,7 +222,21 @@ export default function DiffCheckerPage() {
         });
         setState((prev) => ({ ...prev, original: resolved }));
         setConflicts([]);
+        setShowMergedOutput(true);
     }, [state.original, conflicts]);
+
+    const handleAutoMerge = useCallback(() => {
+        // After auto-merge resolves conflicts, apply them and show output
+        handleResolveAllConflicts();
+    }, [handleResolveAllConflicts]);
+
+    const handleScrollToConflicts = useCallback(() => {
+        // Scroll to merge conflicts section
+        const conflictsElement = document.getElementById('merge-conflicts');
+        if (conflictsElement) {
+            conflictsElement.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }, []);
 
     const hasNext = useMemo(
         () => findNextDifference(diffResult, currentDiffIndex) !== -1,
@@ -240,12 +255,37 @@ export default function DiffCheckerPage() {
         >
             <div className="space-y-4">
                 {/* Merge Conflicts */}
-                {conflicts.length > 0 && (
-                    <MergeConflictResolver
-                        conflicts={conflicts}
-                        onResolve={handleResolveConflict}
-                        onResolveAll={handleResolveAllConflicts}
-                    />
+                <div id="merge-conflicts">
+                    {conflicts.length > 0 && (
+                        <MergeConflictResolver
+                            conflicts={conflicts}
+                            onResolve={handleResolveConflict}
+                            onResolveAll={handleResolveAllConflicts}
+                            onAutoMerge={handleAutoMerge}
+                        />
+                    )}
+                </div>
+
+                {/* Merged Output Display */}
+                {showMergedOutput && conflicts.length === 0 && (
+                    <div className="card p-4 space-y-2">
+                        <div className="flex items-center justify-between">
+                            <label className="text-sm font-medium text-light-text-primary dark:text-dark-text-primary">
+                                ✅ Merged Output (Conflicts Resolved)
+                            </label>
+                            <button
+                                onClick={() => setShowMergedOutput(false)}
+                                className="text-xs text-light-text-secondary dark:text-dark-text-secondary hover:text-light-text-primary dark:hover:text-dark-text-primary"
+                            >
+                                Hide
+                            </button>
+                        </div>
+                        <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                            <pre className="text-sm font-mono text-light-text-primary dark:text-dark-text-primary whitespace-pre-wrap">
+                                {state.original}
+                            </pre>
+                        </div>
+                    </div>
                 )}
 
                 {/* Stats Bar */}
@@ -295,6 +335,8 @@ export default function DiffCheckerPage() {
                     onExportPatch={handleExportPatch}
                     hasNext={hasNext}
                     hasPrev={hasPrev}
+                    conflictCount={conflicts.length}
+                    onMergeConflicts={handleScrollToConflicts}
                 />
 
                 {/* Main Content */}

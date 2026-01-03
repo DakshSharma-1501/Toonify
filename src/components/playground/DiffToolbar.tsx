@@ -7,6 +7,7 @@ import {
     Download,
     FileText,
     Code,
+    GitMerge,
 } from 'lucide-react';
 import type { ViewMode } from '@/lib/playground/types';
 
@@ -21,6 +22,8 @@ interface DiffToolbarProps {
     onExportPatch: () => void;
     hasNext: boolean;
     hasPrev: boolean;
+    conflictCount?: number;
+    onMergeConflicts?: () => void;
 }
 
 export default function DiffToolbar({
@@ -34,6 +37,8 @@ export default function DiffToolbar({
     onExportPatch,
     hasNext,
     hasPrev,
+    conflictCount = 0,
+    onMergeConflicts,
 }: DiffToolbarProps) {
     return (
         <div className="flex flex-wrap items-center justify-between gap-4">
@@ -46,8 +51,8 @@ export default function DiffToolbar({
                     <button
                         onClick={() => onViewModeChange('side-by-side')}
                         className={`px-3 py-1 text-xs rounded transition-all ${viewMode === 'side-by-side'
-                                ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
-                                : 'text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-border/50 dark:hover:bg-dark-border/50'
+                            ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
+                            : 'text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-border/50 dark:hover:bg-dark-border/50'
                             }`}
                     >
                         Side by Side
@@ -55,8 +60,8 @@ export default function DiffToolbar({
                     <button
                         onClick={() => onViewModeChange('unified')}
                         className={`px-3 py-1 text-xs rounded transition-all ${viewMode === 'unified'
-                                ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
-                                : 'text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-border/50 dark:hover:bg-dark-border/50'
+                            ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
+                            : 'text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-border/50 dark:hover:bg-dark-border/50'
                             }`}
                     >
                         Unified
@@ -64,8 +69,8 @@ export default function DiffToolbar({
                     <button
                         onClick={() => onViewModeChange('split')}
                         className={`px-3 py-1 text-xs rounded transition-all ${viewMode === 'split'
-                                ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
-                                : 'text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-border/50 dark:hover:bg-dark-border/50'
+                            ? 'bg-light-accent-primary dark:bg-dark-accent-primary text-white'
+                            : 'text-light-text-secondary dark:text-dark-text-secondary hover:bg-light-border/50 dark:hover:bg-dark-border/50'
                             }`}
                     >
                         Split
@@ -103,6 +108,18 @@ export default function DiffToolbar({
                 >
                     <ArrowLeftRight className="w-4 h-4" />
                 </button>
+
+                {/* Merge Conflicts Button */}
+                {conflictCount > 0 && onMergeConflicts && (
+                    <button
+                        onClick={onMergeConflicts}
+                        className="flex items-center gap-2 px-3 py-2 rounded-lg bg-yellow-500 hover:bg-yellow-600 text-white transition-all text-sm font-medium"
+                        title="Resolve merge conflicts"
+                    >
+                        <GitMerge className="w-4 h-4" />
+                        Merge Conflicts ({conflictCount})
+                    </button>
+                )}
 
                 {/* Export Dropdown */}
                 <div className="relative group">
